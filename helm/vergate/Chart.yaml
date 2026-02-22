@@ -1,0 +1,13 @@
+apiVersion: v2
+name: vergate
+description: App Gateway Platform — version check, maintenance, notices, remote config
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - gateway
+  - api-gateway
+  - mobile
+home: https://github.com/verobee/vergate
+maintainers:
+  - name: verobee

@@ -1,0 +1,77 @@
+# Production values — existing PostgreSQL + Valkey, ESO for secrets
+# Usage:
+#   helm upgrade --install vergate helm/vergate \
+#     -f helm/vergate/values-prod.yaml \
+#     -n vergate --create-namespace
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/verobee/vergate
+  tag: "0.1.0"          # pin to a specific image tag
+  pullPolicy: IfNotPresent
+
+# Use existing cluster databases — do not deploy in-chart
+postgresql:
+  enabled: false
+
+valkey:
+  enabled: false
+
+# ESO: fetch secrets from ClusterSecretStore
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    name: cluster-secret-store   # adjust to your ClusterSecretStore name
+    kind: ClusterSecretStore
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: vergate/production
+        property: database_url
+    - secretKey: DATABASE_USERNAME
+      remoteRef:
+        key: vergate/production
+        property: database_username
+    - secretKey: DATABASE_PASSWORD
+      remoteRef:
+        key: vergate/production
+        property: database_password
+    - secretKey: REDIS_HOST
+      remoteRef:
+        key: vergate/production
+        property: redis_host
+    - secretKey: REDIS_PORT
+      remoteRef:
+        key: vergate/production
+        property: redis_port
+    - secretKey: JWT_SECRET
+      remoteRef:
+        key: vergate/production
+        property: jwt_secret
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  host: vergate.example.com     # replace with your domain
+  tls:
+    - secretName: vergate-tls
+      hosts:
+        - vergate.example.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi

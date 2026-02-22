@@ -1,0 +1,135 @@
+# ── App ──────────────────────────────────────────────────────────────────────
+replicaCount: 2
+
+image:
+  repository: ghcr.io/verobee/vergate
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ── Service Account ───────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# ── Service ───────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 8080
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  host: vergate.example.com
+  tls: []
+  #  - secretName: vergate-tls
+  #    hosts:
+  #      - vergate.example.com
+
+# ── App Config (non-secret) ───────────────────────────────────────────────────
+config:
+  springProfilesActive: prod
+  cache:
+    initTtlSeconds: "60"
+
+# ── External Secrets Operator ─────────────────────────────────────────────────
+# Creates a Kubernetes Secret named "vergate-secret" from your secret store.
+# Required when postgresql.enabled=false or valkey.enabled=false.
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    name: cluster-secret-store   # name of your ClusterSecretStore/SecretStore
+    kind: ClusterSecretStore
+  # List of secrets to sync. Each item maps a Kubernetes secret key to a remote ref.
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: vergate/production
+        property: database_url
+    - secretKey: DATABASE_USERNAME
+      remoteRef:
+        key: vergate/production
+        property: database_username
+    - secretKey: DATABASE_PASSWORD
+      remoteRef:
+        key: vergate/production
+        property: database_password
+    - secretKey: REDIS_HOST
+      remoteRef:
+        key: vergate/production
+        property: redis_host
+    - secretKey: REDIS_PORT
+      remoteRef:
+        key: vergate/production
+        property: redis_port
+    - secretKey: JWT_SECRET
+      remoteRef:
+        key: vergate/production
+        property: jwt_secret
+
+# ── Resources ─────────────────────────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# ── HPA ───────────────────────────────────────────────────────────────────────
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+# ── Probes ────────────────────────────────────────────────────────────────────
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  failureThreshold: 3
+
+# ── Pod ───────────────────────────────────────────────────────────────────────
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ── Optional: PostgreSQL (disabled by default — use existing cluster DB) ───────
+postgresql:
+  enabled: false
+  image: postgres:17
+  database: vergate
+  username: vergate
+  password: vergate        # only used when enabled; prefer ESO for prod
+  storage: 10Gi
+  storageClass: ""         # "" = use cluster default
+
+# ── Optional: Valkey (disabled by default — use existing cluster Valkey) ───────
+valkey:
+  enabled: false
+  image: valkey/valkey:8
+  storage: 2Gi
+  storageClass: ""         # "" = use cluster default

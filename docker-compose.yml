@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: vergate-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vergate}
+      POSTGRES_USER: ${POSTGRES_USER:-vergate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vergate}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vergate} -d ${POSTGRES_DB:-vergate}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: valkey/valkey:8
+    container_name: vergate-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    container_name: vergate-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-vergate}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-vergate}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-vergate}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
