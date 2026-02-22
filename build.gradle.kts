@@ -74,6 +74,13 @@ allOpen {
 tasks.withType<Test> {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
+    // Skip Testcontainers-based tests in CI (no Docker socket on ARC runners)
+    if (System.getenv("CI") == "true") {
+        filter {
+            excludeTestsMatching("*E2ETest")
+            excludeTestsMatching("*IntegrationTest")
+        }
+    }
 }
 
 tasks.jacocoTestReport {

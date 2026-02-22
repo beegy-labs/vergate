@@ -1,9 +1,9 @@
 build/
 .gradle/
-!gradle/wrapper/gradle-wrapper.jar
 *.class
 *.jar
 *.war
+!gradle/wrapper/gradle-wrapper.jar
 
 # IDE
 .idea/
