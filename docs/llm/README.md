@@ -22,20 +22,21 @@
 | Task Type        | Required Files                        |
 | ---------------- | ------------------------------------- |
 | **Backend Arch** | `policies/hexagonal-architecture.md`  |
-| **DB migration** | `policies/database.md`                |
+| **DB migration** | `policies/hexagonal-architecture.md` (Flyway section) |
 | **Testing**      | `policies/testing.md`                 |
 | **Deployment**   | `policies/deployment.md`              |
+| **Git flow**     | `git-flow.md`                         |
 
 ## Policies
 
-| File                          | Topic        | Source              |
-| ----------------------------- | ------------ | ------------------- |
-| cdd.md                        | CDD policy   | symlink (submodule) |
-| sdd.md                        | SDD policy   | symlink (submodule) |
-| add.md                        | ADD policy   | symlink (submodule) |
-| hexagonal-architecture.md     | Backend arch | project-specific    |
-| testing.md                    | Test strategy| project-specific    |
-| deployment.md                 | Helm + ESO   | project-specific    |
+| File                          | Topic              | Source              |
+| ----------------------------- | ------------------ | ------------------- |
+| cdd.md                        | CDD policy         | symlink (submodule) |
+| sdd.md                        | SDD policy         | symlink (submodule) |
+| add.md                        | ADD policy         | symlink (submodule) |
+| hexagonal-architecture.md     | Backend arch       | project-specific    |
+| testing.md                    | Test strategy      | project-specific    |
+| deployment.md                 | GitOps + ArgoCD    | project-specific    |
 
 ## Entry Points
 

@@ -39,16 +39,17 @@
 
 | Category  | Technology                                    |
 | --------- | --------------------------------------------- |
-| Language  | Kotlin                                        |
-| Framework | Spring Boot 3.x                               |
+| Language  | Kotlin 2.1                                    |
+| Framework | Spring Boot 3.4                               |
 | Build     | Gradle (Kotlin DSL)                            |
 | Database  | PostgreSQL + Spring Data JPA                   |
-| Cache     | Redis (Valkey compatible)                      |
+| Cache     | Valkey (Redis-compatible)                      |
 | Migration | Flyway                                         |
-| Auth      | Spring Security + JWT                          |
+| Auth      | Spring Security + JWT (JJWT)                  |
 | API Docs  | SpringDoc OpenAPI (Swagger)                    |
+| Markdown  | CommonMark (legal document rendering)         |
 | Test      | JUnit5 + MockK + Testcontainers               |
-| Deploy    | Helm + Kubernetes (ArgoCD + ESO)              |
+| Deploy    | GitOps (ArgoCD + platform-gitops + ESO)       |
 | ID        | UUIDv7 (all primary keys, app-generated)      |
 
 **SSOT**: `docs/llm/rules.md`

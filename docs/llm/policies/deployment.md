@@ -1,136 +1,118 @@
 # Deployment Policy
 
-> Helm + Kubernetes + ESO | **Last Updated**: 2026-02-22
+> GitOps via ArgoCD + platform-gitops | **Last Updated**: 2026-02-23
 
 ## Overview
 
-Vergate is deployed to Kubernetes via Helm. Secrets are injected using External Secrets Operator (ESO). PostgreSQL and Valkey can be deployed as part of the chart or connected externally.
+Vergate is deployed via **GitOps** (ArgoCD + platform-gitops). Direct `helm install` is NOT used in production. Secrets are injected via External Secrets Operator (ESO) from Vault.
 
-## Helm Chart Structure
+## Deployment Flow
 
 ```
-helm/vergate/
-├── Chart.yaml
-├── values.yaml          # defaults (postgresql/valkey disabled)
-├── values-prod.yaml     # production overrides example
-└── templates/
-    ├── _helpers.tpl
-    ├── deployment.yaml
-    ├── service.yaml
-    ├── serviceaccount.yaml
-    ├── configmap.yaml
-    ├── externalsecret.yaml
-    ├── ingress.yaml
-    ├── hpa.yaml
-    ├── postgresql.yaml  # conditional (postgresql.enabled)
-    └── valkey.yaml      # conditional (valkey.enabled)
+vergate repo (develop/main push)
+  → CI builds image → pushes to gitea.girok.dev/beegy-labs/vergate
+  → CI updates image tag in platform-gitops values file
+  → ArgoCD detects diff → applies to cluster
 ```
 
-## Deployment Commands
+## Environments
 
-```bash
-# Install / upgrade
-helm upgrade --install vergate helm/vergate \
-  -f helm/vergate/values-prod.yaml \
-  -n vergate --create-namespace
+| Env  | Namespace          | ArgoCD App       | Domain                    | Image Tag  | Replicas |
+| ---- | ------------------ | ---------------- | ------------------------- | ---------- | -------- |
+| dev  | `app-shared-gateway` | `app-vergate-dev`  | `vergate-dev.girok.dev` | `develop`  | 1        |
+| prod | `app-shared-gateway` | `app-vergate-prod` | `vergate.girok.dev`     | `main`     | 2        |
 
-# Dry-run
-helm upgrade --install vergate helm/vergate \
-  -f helm/vergate/values-prod.yaml \
-  -n vergate --dry-run
+## platform-gitops Files
 
-# Uninstall
-helm uninstall vergate -n vergate
+```
+apps/shared/vergate/              ← Helm chart (shared template)
+  Chart.yaml
+  values.yaml                     ← defaults
+  templates/
+    deployment.yaml
+    service.yaml
+    externalsecret.yaml
+    httproute.yaml
+
+clusters/home/values/
+  vergate-dev-values.yaml         ← dev overrides (image tag, domain, resources)
+  vergate-prod-values.yaml        ← prod overrides
+
+clusters/home/applications/
+  app-vergate-dev.yaml            ← ArgoCD Application
+  app-vergate-prod.yaml           ← ArgoCD Application
 ```
 
-## Optional Components
+## HTTPRoute (Cilium Gateway API)
 
-| Component  | `values.yaml` key    | Default | Notes                              |
-| ---------- | -------------------- | ------- | ---------------------------------- |
-| PostgreSQL | `postgresql.enabled` | `false` | StatefulSet + PVC + ClusterIP svc  |
-| Valkey     | `valkey.enabled`     | `false` | StatefulSet + PVC + ClusterIP svc  |
-
-When disabled: credentials must be provided via ESO (`externalSecrets.enabled: true`).
-
-## External Secrets Operator (ESO)
-
-### Required CRD
-
-`ExternalSecret` (`external-secrets.io/v1beta1`) — reads from `SecretStore` / `ClusterSecretStore` and creates a Kubernetes `Secret` named `vergate-secret`.
-
-### Secret Keys
-
-| Kubernetes Secret Key | Spring Boot Env Var | Required When          |
-| --------------------- | ------------------- | ---------------------- |
-| `DATABASE_URL`        | `DATABASE_URL`      | `postgresql.enabled: false` |
-| `DATABASE_USERNAME`   | `DATABASE_USERNAME` | `postgresql.enabled: false` |
-| `DATABASE_PASSWORD`   | `DATABASE_PASSWORD` | `postgresql.enabled: false` |
-| `REDIS_HOST`          | `REDIS_HOST`        | `valkey.enabled: false`     |
-| `REDIS_PORT`          | `REDIS_PORT`        | always                      |
-| `JWT_SECRET`          | `JWT_SECRET`        | always                      |
-
-### ESO values.yaml Configuration
+Traffic routing is via Gateway API `HTTPRoute`, **not** Kubernetes `Ingress`.
 
 ```yaml
-externalSecrets:
+httpRoute:
   enabled: true
-  refreshInterval: 1h
-  secretStoreRef:
-    name: cluster-secret-store   # name of your ClusterSecretStore
-    kind: ClusterSecretStore
-  data:
-    - secretKey: DATABASE_URL
-      remoteRef:
-        key: vergate/production
-        property: database_url
-    - secretKey: DATABASE_USERNAME
-      remoteRef:
-        key: vergate/production
-        property: database_username
-    - secretKey: DATABASE_PASSWORD
-      remoteRef:
-        key: vergate/production
-        property: database_password
-    - secretKey: REDIS_HOST
-      remoteRef:
-        key: vergate/production
-        property: redis_host
-    - secretKey: REDIS_PORT
-      remoteRef:
-        key: vergate/production
-        property: redis_port
-    - secretKey: JWT_SECRET
-      remoteRef:
-        key: vergate/production
-        property: jwt_secret
+  hostname: vergate-dev.girok.dev   # or vergate.girok.dev
+  gatewayName: web-gateway
+  gatewayNamespace: system-network
 ```
 
-## Application Configuration
+External path: `vergate[-dev].girok.dev` → Cloudflare Tunnel (proxied) → `web-gateway` → `HTTPRoute` → Service
 
-The app runs with `SPRING_PROFILES_ACTIVE=prod` which reads:
+## Vault Secrets (ESO)
 
-| Spring property          | Env Var             |
-| ------------------------ | ------------------- |
-| `spring.datasource.url`  | `DATABASE_URL`      |
-| `spring.datasource.username` | `DATABASE_USERNAME` |
-| `spring.datasource.password` | `DATABASE_PASSWORD` |
-| `spring.data.redis.host` | `REDIS_HOST`        |
-| `spring.data.redis.port` | `REDIS_PORT`        |
+| Vault Path              | Keys                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `secret/app/vergate-dev`  | `database_url`, `database_username`, `database_password`, `redis_host`, `redis_port`, `redis_password`, `jwt_secret` |
+| `secret/app/vergate-prod` | same keys                                                                      |
+
+ESO syncs to Kubernetes Secret named `vergate-{env}-secret` in `app-shared-gateway`.
+
+## Database
+
+| Env  | DB Name        | User           | Host                        |
+| ---- | -------------- | -------------- | --------------------------- |
+| dev  | `vergate_dev`  | `vergate_dev`  | `db-postgres-001.beegy.net` |
+| prod | `vergate_prod` | `vergate_prod` | `db-postgres-001.beegy.net` |
+
+## Application Config
+
+Spring Boot reads from environment variables (injected from ESO Secret):
+
+| Env Var             | Spring Property                     |
+| ------------------- | ----------------------------------- |
+| `DATABASE_URL`      | `spring.datasource.url`             |
+| `DATABASE_USERNAME` | `spring.datasource.username`        |
+| `DATABASE_PASSWORD` | `spring.datasource.password`        |
+| `REDIS_HOST`        | `spring.data.redis.host`            |
+| `REDIS_PORT`        | `spring.data.redis.port`            |
+| `REDIS_PASSWORD`    | `spring.data.redis.password`        |
+| `JWT_SECRET`        | `app.jwt.secret`                    |
+
+Active profile: `SPRING_PROFILES_ACTIVE=prod`
+
+## DNS (Cloudflare Terraform)
+
+DNS records managed in `bootstrap/terraform/variables.tf` (platform-gitops):
+
+```hcl
+"vergate"     = true   # proxied — prod API
+"vergate-dev" = true   # proxied — dev API
+```
+
+Both CNAMEs point to `tunnel-home.girok.dev` (Cloudflare Tunnel).
 
 ## Production Checklist
 
-- [ ] `ClusterSecretStore` configured and connected to secret backend
-- [ ] All required secrets exist in secret backend
-- [ ] `ExternalSecret` synced (`kubectl get externalsecret -n vergate`)
-- [ ] Image tag pinned (not `latest`) in `values-prod.yaml`
-- [ ] Ingress host and TLS configured
-- [ ] HPA enabled with appropriate min/max replicas
-- [ ] Resource requests/limits set
-- [ ] `postgresql.enabled: false` (use existing cluster DB)
-- [ ] `valkey.enabled: false` (use existing cluster Valkey)
+- [ ] Vault secrets exist at `secret/app/vergate-prod`
+- [ ] ExternalSecret synced (`kubectl get externalsecret -n app-shared-gateway`)
+- [ ] Image tag pinned in `vergate-prod-values.yaml` (not `latest`)
+- [ ] Flyway migrations applied (auto on startup, validate-only in prod)
+- [ ] Replicas ≥ 2 for HA
+- [ ] HPA configured if traffic spikes expected
+- [ ] DNS record live (`dig vergate.girok.dev`)
 
 ## References
 
 - `.ai/deployment.md` — Quick reference
-- `helm/vergate/values.yaml` — All configurable values
-- `helm/vergate/values-prod.yaml` — Production example
+- `apps/shared/vergate/` — Helm chart (platform-gitops)
+- `clusters/home/values/vergate-*-values.yaml` — Per-env config
+- `docs/llm/components/vergate.md` — Component doc (platform-gitops repo)

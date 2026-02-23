@@ -51,4 +51,4 @@ Central gateway that client apps call once on launch (`/api/v1/init`) to get ver
 | 6  | Semver comparison in domain        | No library dependency; pure Kotlin logic    |
 | 7  | UUIDv7 for all primary keys        | Time-ordered, app-generated, URL-safe appKey (Base62) |
 | 8  | Legal docs as hosted HTML pages    | Client opens URL directly; no content in init response |
-| 9  | Helm + ESO for deployment          | GitOps-compatible; secrets never in values files |
+| 9  | GitOps via ArgoCD + platform-gitops | Secrets via Vault ESO; no direct helm install in prod |

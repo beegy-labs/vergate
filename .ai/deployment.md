@@ -1,35 +1,27 @@
 # Deployment
 
-> Helm + Kubernetes + ESO | **Last Updated**: 2026-02-22
+> GitOps via ArgoCD + platform-gitops | **Last Updated**: 2026-02-23
 
-## Helm Chart
+## Environments
 
-Located at `helm/vergate/`. Deploy with:
+| Env  | Domain                  | Namespace            | ArgoCD App         |
+| ---- | ----------------------- | -------------------- | ------------------ |
+| dev  | `vergate-dev.girok.dev` | `app-shared-gateway` | `app-vergate-dev`  |
+| prod | `vergate.girok.dev`     | `app-shared-gateway` | `app-vergate-prod` |
 
-```bash
-helm upgrade --install vergate helm/vergate \
-  -f helm/vergate/values-prod.yaml \
-  -n vergate --create-namespace
+## Deployment Flow
+
+```
+push develop/main → CI builds image → tag update in platform-gitops → ArgoCD applies
 ```
 
-## Optional Dependencies
+## Secrets (Vault → ESO)
 
-| Component  | Default   | values.yaml key          |
-| ---------- | --------- | ------------------------ |
-| PostgreSQL | `false`   | `postgresql.enabled`     |
-| Valkey     | `false`   | `valkey.enabled`         |
+| Vault Path               | K8s Secret           |
+| ------------------------ | -------------------- |
+| `secret/app/vergate-dev` | `vergate-dev-secret` |
+| `secret/app/vergate-prod`| `vergate-prod-secret`|
 
-When disabled, credentials are injected via ESO secret (`vergate-secret`).
-
-## Secrets (ESO)
-
-| Env Var             | Source                  |
-| ------------------- | ----------------------- |
-| `DATABASE_URL`      | ESO → `vergate-secret`  |
-| `DATABASE_USERNAME` | ESO → `vergate-secret`  |
-| `DATABASE_PASSWORD` | ESO → `vergate-secret`  |
-| `REDIS_HOST`        | ESO → `vergate-secret`  |
-| `REDIS_PORT`        | ESO → `vergate-secret`  |
-| `JWT_SECRET`        | ESO → `vergate-secret`  |
+Keys: `database_url`, `database_username`, `database_password`, `redis_host`, `redis_port`, `redis_password`, `jwt_secret`
 
 **SSOT**: `docs/llm/policies/deployment.md`
