@@ -119,32 +119,35 @@ project/
 
 ## Project-Specific Configuration (Vergate)
 
-> **Last Updated**: 2026-02-21
+> **Last Updated**: 2026-02-23
 
 ### Architecture & Stack
 
 | Layer         | Tech                                              |
 | ------------- | ------------------------------------------------- |
-| **Language**  | Kotlin                                            |
-| **Framework** | Spring Boot 3.x                                   |
+| **Language**  | Kotlin 2.1                                        |
+| **Framework** | Spring Boot 3.4                                   |
 | **Build**     | Gradle (Kotlin DSL)                                |
 | **Database**  | PostgreSQL + Spring Data JPA                       |
-| **Cache**     | Redis (Valkey compatible)                          |
+| **Cache**     | Valkey (Redis-compatible)                          |
 | **Migration** | Flyway                                             |
-| **Auth**      | Spring Security + JWT                              |
+| **Auth**      | Spring Security + JWT (JJWT)                      |
 | **API Docs**  | SpringDoc OpenAPI (Swagger)                        |
+| **Markdown**  | CommonMark (legal document rendering)             |
 | **Test**      | JUnit5 + MockK + Testcontainers                   |
-| **Deploy**    | Docker + Kubernetes (ArgoCD via platform-gitops)   |
+| **Deploy**    | GitOps (ArgoCD + platform-gitops + ESO)           |
 
 ### Backend Architecture
 
 All backend code uses **Hexagonal Architecture** (Ports & Adapters):
 
-| Layer    | Role                | Directory                         |
-| -------- | ------------------- | --------------------------------- |
-| Domain   | Business logic      | `domain/`                         |
-| Ports    | Interfaces (in/out) | `ports/in/`, `ports/out/`         |
-| Adapters | Infrastructure impl | `adapters/in/`, `adapters/out/`   |
+| Layer    | Role                    | Directory                         |
+| -------- | ----------------------- | --------------------------------- |
+| Domain   | Business logic (pure Kotlin) | `domain/model/`, `domain/service/` |
+| Ports    | Output interfaces       | `ports/out/`                      |
+| Adapters | Infrastructure impl     | `adapters/in/`, `adapters/out/`   |
+
+> No `ports/in/` — domain services ARE the use cases directly.
 
 **Full Policy**: `docs/llm/policies/hexagonal-architecture.md`
 
@@ -154,7 +157,7 @@ All backend code uses **Hexagonal Architecture** (Ports & Adapters):
 | ----------------- | ------------------------------------ |
 | Language          | English only (code, docs, commits)   |
 | GitFlow           | `feat/* -> develop -> main`          |
-| Test Coverage     | 80% minimum                          |
+| Test Coverage     | 80% minimum (JaCoCo gate)            |
 | Transaction       | `@Transactional` for multi-step DB   |
 | No Human Doc Edit | LLM handles all documentation        |
 

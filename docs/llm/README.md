@@ -47,3 +47,4 @@
 | Git flow     | `.ai/git-flow.md`                    |
 | Testing      | `policies/testing.md`                |
 | Deployment   | `policies/deployment.md`             |
+| Gateway API  | `services/gateway.md`                |

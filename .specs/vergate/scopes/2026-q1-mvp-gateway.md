@@ -22,7 +22,7 @@ Adapters (outer) --> Ports (boundary) --> Domain (inner)
 | Layer    | Role                     | Directory                                    |
 | -------- | ------------------------ | -------------------------------------------- |
 | Domain   | Business logic (pure Kotlin) | `domain/model/`, `domain/service/`       |
-| Ports    | Interfaces               | `ports/in/`, `ports/out/`                    |
+| Ports    | Output interfaces        | `ports/out/`                                 |
 | Adapters | Infrastructure           | `adapters/in/rest/`, `adapters/out/persistence/`, `adapters/out/cache/` |
 | Config   | Spring wiring            | `config/`                                    |
 

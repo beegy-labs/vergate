@@ -21,15 +21,15 @@
 | [git-flow.md](git-flow.md)            | Branch strategy            |
 | [pull-requests.md](pull-requests.md)  | PR conventions             |
 | [testing.md](testing.md)              | Test pyramid & coverage    |
-| [deployment.md](deployment.md)        | Helm + ESO deployment      |
+| [deployment.md](deployment.md)        | GitOps deployment          |
 
 ## Quick Links
 
 | Topic        | Tier 2 SSOT                                   |
 | ------------ | --------------------------------------------- |
 | Backend Arch | `docs/llm/policies/hexagonal-architecture.md` |
-| Database     | `docs/llm/policies/database.md`               |
 | Testing      | `docs/llm/policies/testing.md`                |
 | Deployment   | `docs/llm/policies/deployment.md`             |
+| Gateway API  | `docs/llm/services/gateway.md`                |
 
 **CDD Policy**: `docs/llm/policies/cdd.md`
